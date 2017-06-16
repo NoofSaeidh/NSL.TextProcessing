@@ -67,7 +67,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BaseExtensions\NSL.DotNet.csproj">
+    <ProjectReference Include="..\NSL.DotNet\NSL.DotNet.csproj">
       <Project>{e0578cc0-9c7e-4277-87e8-4572ec4593c3}</Project>
       <Name>NSL.DotNet</Name>
     </ProjectReference>
