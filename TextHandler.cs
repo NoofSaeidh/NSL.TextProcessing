@@ -12,6 +12,7 @@ using HighIndex = System.Collections.Generic.KeyValuePair<int, NSL.TextProcessin
 
 namespace NSL.TextProcessing {
     public class TextHandler : IDisposable {
+        #region Common
         public readonly char[] PossibleHyphens = new char[]{DefaultHyphyn, '‑' };
         public const char DefaultHyphyn = '-';
         public List<char> Hyphens { get; set; }
@@ -30,6 +31,90 @@ namespace NSL.TextProcessing {
             else Hyphens = new List<char> { DefaultHyphyn };
         }
 
+        public void Dispose() {
+            Hunspell?.Dispose();
+        }
+
+        public override string ToString() => Text.ToString();
+
+        private string[] GetSentence(int index, out int newindex) {
+            var begin = 0;
+            var end = Text.Items.Count;
+            newindex = index;
+
+            for (var i = index - 1 ; i >= 0 ; i--) {
+                var breakFlag = false;
+                foreach (var schar in sentenceChars) {
+                    if (Text.Items[i].Right.Contains(schar)) {
+                        begin = i + 1;
+                        breakFlag = true;
+                        break;
+                    }
+                }
+                if (breakFlag) break;
+
+            }
+            for (var i = index + 1 ; i < Text.Items.Count ; i++) {
+                var breakFlag = false;
+                foreach (var schar in sentenceChars) {
+                    if (Text.Items[i].Right.Contains(schar)) {
+                        end = i - 1;
+                        breakFlag = true;
+                        break;
+                    }
+                }
+                if (breakFlag) break;
+            }
+
+            //if (begin == end) return null;
+            newindex = index - begin;
+            return Text.Items.GetRange(begin, end - begin).Select(x => x.String).ToArray();
+        }
+        private HighlightWord[] GetHighlighSentence(int index, int minMax, params HighIndex[] highlighs) {
+            var begin = 0;
+            var end = Text.Items.Count - 1;
+
+            //search for begging of sentence
+            for (var i = index - 1 ; i >= 0 ; i--) {
+                var breakFlag = false;
+                foreach (var schar in sentenceChars) {
+                    if (Text.Items[i].Right.Contains(schar)) {
+                        begin = i + 1;
+                        breakFlag = true;
+                        break;
+                    }
+                }
+                if (breakFlag) break;
+
+            }
+
+            //search for ending of sentence
+            for (var i = index + 1 ; i < Text.Items.Count ; i++) {
+                if (i < minMax) continue;
+                var breakFlag = false;
+                foreach (var schar in sentenceChars) {
+                    if (Text.Items[i].Right.Contains(schar)) {
+                        end = i - 1;
+                        breakFlag = true;
+                        break;
+                    }
+                }
+                if (breakFlag) break;
+            }
+
+            var sentece = new HighlightWord[end-begin+1];
+            //make highlighted sentence
+            for (int i = begin, j = 0 ; i <= end ; i++, j++) {
+                var high = highlighs.Where(x=>x.Key==i).FirstOrDefault().Value;
+                sentece[j] = new HighlightWord(Text.Items[i].String, high);
+            }
+
+            return sentece;
+        }
+        private readonly char[] sentenceChars = new char[]{'.','\n','\r','!','?'};
+        #endregion
+
+        #region Processing
         public void RemoveHyphenation(RemoveHyphenCallback callback) {
             ExceptionHelper.CheckNull(callback, nameof(callback));
             ExceptionHelper.CheckNull(Hunspell, nameof(Hunspell));
@@ -156,89 +241,6 @@ namespace NSL.TextProcessing {
                 }
             }
         }
-
-        public void Dispose() {
-            Hunspell?.Dispose();
-        }
-
-        public override string ToString() => Text.ToString();
-
-        private string[] GetSentence(int index, out int newindex) {
-            var begin = 0;
-            var end = Text.Items.Count;
-            newindex = index;
-
-            for (var i = index - 1 ; i >= 0 ; i--) {
-                var breakFlag = false;
-                foreach (var schar in sentenceChars) {
-                    if (Text.Items[i].Right.Contains(schar)) {
-                        begin = i + 1;
-                        breakFlag = true;
-                        break;
-                    }
-                }
-                if (breakFlag) break;
-
-            }
-            for (var i = index + 1 ; i < Text.Items.Count ; i++) {
-                var breakFlag = false;
-                foreach (var schar in sentenceChars) {
-                    if (Text.Items[i].Right.Contains(schar)) {
-                        end = i - 1;
-                        breakFlag = true;
-                        break;
-                    }
-                }
-                if (breakFlag) break;
-            }
-
-            //if (begin == end) return null;
-            newindex = index - begin;
-            return Text.Items.GetRange(begin, end - begin).Select(x => x.String).ToArray();
-        }
-
-        private HighlightWord[] GetHighlighSentence(int index, int minMax, params HighIndex[] highlighs) {
-            var begin = 0;
-            var end = Text.Items.Count - 1;
-
-            //search for begging of sentence
-            for (var i = index - 1 ; i >= 0 ; i--) {
-                var breakFlag = false;
-                foreach (var schar in sentenceChars) {
-                    if (Text.Items[i].Right.Contains(schar)) {
-                        begin = i + 1;
-                        breakFlag = true;
-                        break;
-                    }
-                }
-                if (breakFlag) break;
-
-            }
-
-            //search for ending of sentence
-            for (var i = index + 1 ; i < Text.Items.Count ; i++) {
-                if (i < minMax) continue;
-                var breakFlag = false;
-                foreach (var schar in sentenceChars) {
-                    if (Text.Items[i].Right.Contains(schar)) {
-                        end = i - 1;
-                        breakFlag = true;
-                        break;
-                    }
-                }
-                if (breakFlag) break;
-            }
-
-            var sentece = new HighlightWord[end-begin+1];
-            //make highlighted sentence
-            for (int i = begin, j = 0 ; i <= end ; i++, j++) {
-                var high = highlighs.Where(x=>x.Key==i).FirstOrDefault().Value;
-                sentece[j] = new HighlightWord(Text.Items[i].String, high);
-            }
-
-            return sentece;
-        }
-
-        private readonly char[] sentenceChars = new char[]{'.','\n','\r','!','?'};
+        #endregion
     }
 }
